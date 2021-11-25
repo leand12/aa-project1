@@ -5,6 +5,7 @@ import networkx as nx
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from time import perf_counter
+import time
 from typing import Tuple
 
 Point = Tuple[int, int]
@@ -130,10 +131,9 @@ class SearchGraph:
             G,
             pos=positions,
             nodelist=self.solution[1][0],
-            node_size=800,
-            node_color="white"
+            node_size=500,
+            node_color="black"
         )
-        sol_nodes.set_edgecolor('black')
 
         nx.draw(G,
                 pos=positions,
@@ -141,11 +141,10 @@ class SearchGraph:
                 nodelist=self.vertices,
                 cmap=mpl.cm.summer,
                 node_color=colors,
+                edge_color='gray',
                 font_weight='bold',
-                font_color='whitesmoke',
+                font_color='white',
                 with_labels=True)
-
-        plt.show()
 
     def subset_cost(self, subset):
         return sum(self.vertices[v] for v in subset)
@@ -160,14 +159,18 @@ class SearchGraph:
         sorted_weights = sorted(self.vertices.values())
         cumulative_min_weight = [sum(sorted_weights[:s + 1])
                                  for s in range(self.size)]
+        
+        vertices = list(self.vertices.keys())
 
         for sub_size in range(1, self.size + 1):
+            print(sub_size)
             if cumulative_min_weight[sub_size - 1] > self.min_cost:
                 # prune
                 return
 
-            for subset in itertools.combinations(range(self.size), sub_size):
+            for index in itertools.combinations(range(self.size), sub_size):
                 # cost = self.subset_cost(subset)
+                subset = set(vertices[i] for i in index)
                 yield None, subset
 
     def greedy_combinations(self):
@@ -183,7 +186,7 @@ class SearchGraph:
             if len(index) == n:
                 continue
 
-            subset = tuple(sorted_vertices[i] for i in index)
+            subset = set(sorted_vertices[i] for i in index)
 
             if cost > self.min_cost:
                 # prune
@@ -205,7 +208,7 @@ class SearchGraph:
             queue.sort(key=lambda x: -x[0])
             cost, index = queue.pop()
 
-            subset = tuple(sorted_vertices[i] for i in index)
+            subset = set(sorted_vertices[i] for i in index)
 
             if cost > self.min_cost:
                 # prune
@@ -238,7 +241,6 @@ class SearchGraph:
         for cost, subset in self.combinations(strategy):
             self.iter += 1
 
-            subset = set(subset)
             if not self.is_dominating_subset(subset, graph):
                 continue
 
@@ -257,20 +259,33 @@ class SearchGraph:
 # g = SearchGraph().read_graph("graph1.txt")
 g = SearchGraph().random_graph(20, 93446)
 
+
+fig, ax = plt.subplots(2, 2, num=1)
+
+
 g.search('greedy')
 print(g.solution, g.iter)
 print(f"{g.exec_time:.6f}")
 
+plt.sca(ax[0][0])
 g.draw_graph()
+ax[0][0].set_title('greedy', fontsize=10)
+
 
 g.search('astar')
 print(g.solution, g.iter)
 print(f"{g.exec_time:.6f}")
 
+plt.sca(ax[0][1])
 g.draw_graph()
+ax[0][1].set_title('astar', fontsize=10)
 
 g.search('exhaustive')
 print(g.solution, g.iter)
 print(f"{g.exec_time:.6f}")
 
+plt.sca(ax[1][0])
 g.draw_graph()
+ax[1][0].set_title('exhaustive', fontsize=10)
+
+plt.show()
