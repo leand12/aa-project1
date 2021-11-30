@@ -127,43 +127,57 @@ class SearchGraph:
             norm=norm, cmap=mpl.cm.coolwarm)
         colors = [mapper.to_rgba(i)
                   for i in self.vertices.values()]
-        
-        for i, v in enumerate(self.vertices):
-            r, g, b, a = colors[i]
-            if v not in self.solution[1][0]:
-                colors[i] = (r, g, b, .6)
 
-        sol_vertices = []
+        sol_vertices = {}
         sol_colors = []
-        for i, v in enumerate(self.vertices):
+        rem_vertices = {}
+        rem_colors = []
+        for i, (v, w) in enumerate(self.vertices.items()):
             if v in self.solution[1][0]:
-                sol_vertices.append(v)
+                sol_vertices[v] = w
                 sol_colors.append(colors[i])
+            else:
+                rem_vertices[v] = w
+                rem_colors.append(colors[i])
 
-        sol_nodes = nx.draw_networkx_nodes(
+        nx.draw_networkx_edges(
             G,
             pos=positions,
-            nodelist=sol_vertices,
-            node_size=600,
-            node_color="white",
-            ax=ax
-        )
-        # sol_nodes.set_edgecolors(sol_colors)
-        sol_nodes.set_edgecolors('limegreen')
-        # sol_nodes.set_linestyle('dashed')
-        sol_nodes.set_linewidth(2)
+            nodelist=self.vertices,
+            edge_color='gray',
+            node_size=500,
+            width=2,
+            ax=ax)
 
-        nx.draw(G,
-                pos=positions,
-                labels=self.vertices,
-                nodelist=self.vertices,
-                cmap=mpl.cm.summer,
-                node_color=colors,
-                edge_color='gray',
-                font_weight='bold',
-                font_color='white',
-                with_labels=True,
-                ax=ax)
+        nx.draw_networkx_nodes(
+            G,
+            pos=positions,
+            labels=sol_vertices,
+            nodelist=sol_vertices,
+            node_size=800,
+            node_color=sol_colors,
+            cmap=mpl.cm.summer,
+            ax=ax)
+
+        rem_nodes = nx.draw_networkx_nodes(
+            G,
+            pos=positions,
+            labels=rem_vertices,
+            nodelist=rem_vertices,
+            node_size=500,
+            node_color='white',
+            cmap=mpl.cm.summer,
+            ax=ax)
+        rem_nodes.set_edgecolors(rem_colors)
+        rem_nodes.set_linewidth(2)
+
+        nx.draw_networkx_labels(
+            G,
+            pos=positions,
+            labels=self.vertices,
+            font_weight='bold',
+            font_color='black',
+            with_labels=True)
 
     def subset_cost(self, subset):
         return sum(self.vertices[v] for v in subset)
@@ -178,7 +192,7 @@ class SearchGraph:
         sorted_weights = sorted(self.vertices.values())
         cumulative_min_weight = [sum(sorted_weights[:s + 1])
                                  for s in range(self.size)]
-        
+
         vertices = list(self.vertices.keys())
 
         for sub_size in range(1, self.size + 1):
@@ -274,7 +288,7 @@ class SearchGraph:
 
 # g = SearchGraph().read_graph("graph1.txt")
 
-for size in range(2, 40):
+for size in range(29, 40):
     g = SearchGraph().random_graph(size, 93446)
 
     fig, ax = plt.subplots(1, 3, num=1)
@@ -289,12 +303,14 @@ for size in range(2, 40):
         plt.sca(ax[i])
         g.draw_graph(ax[i])
 
-        ax[i].set_title(f"Solution with {algo.capitalize()} Search and size = {size}", fontsize=14)
+        ax[i].set_title(
+            f"Solution with {algo.capitalize()} Search and size = {size}", fontsize=14)
         ax[i].set_xlabel(f"total cost = {g.solution[0]}", fontsize=12)
         ax[i].set_axis_on()
         ax[i].set_xlim(0, 10)
         ax[i].set_ylim(0, 10)
-        ax[i].tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+        ax[i].tick_params(left=True, bottom=True,
+                          labelleft=True, labelbottom=True)
 
     fig.savefig(f"plots/g{size}.png", dpi=100)
     fig.clear()
