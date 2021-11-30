@@ -32,6 +32,7 @@ class SearchGraph:
         assert w >= 0, "Weight must be positive"
         assert isinstance(v, tuple), f"Vertice must be a tuple"
         assert v not in self.vertices, f"Vertice {v} already added"
+        assert len(self.vertices) <= 81, "Limit of vertices exceeded"
 
         self.vertices[v] = w
         return self
@@ -89,7 +90,7 @@ class SearchGraph:
         return self
 
     def random_graph(self, size, seed=None):
-        assert size <= 81, "Size must be lower than 81"
+        assert 2 <= size <= 81, "Size must be between [2, 81]"
 
         self.vertices.clear()
         self.edges.clear()
@@ -111,13 +112,14 @@ class SearchGraph:
 
         return self
 
-    def draw_graph(self):
+    def draw_graph(self, ax=None):
         G = nx.Graph()
 
         for v, neighbours in self.edges.items():
             for n in neighbours:
                 G.add_edge(v, n)
 
+        positions = {x: x for x in G.nodes}
         low, *_, high = sorted(self.vertices.values())
         norm = mpl.colors.Normalize(
             vmin=low, vmax=high, clip=True)
@@ -125,15 +127,31 @@ class SearchGraph:
             norm=norm, cmap=mpl.cm.coolwarm)
         colors = [mapper.to_rgba(i)
                   for i in self.vertices.values()]
-        positions = {x: x for x in G.nodes}
+        
+        for i, v in enumerate(self.vertices):
+            r, g, b, a = colors[i]
+            if v not in self.solution[1][0]:
+                colors[i] = (r, g, b, .6)
+
+        sol_vertices = []
+        sol_colors = []
+        for i, v in enumerate(self.vertices):
+            if v in self.solution[1][0]:
+                sol_vertices.append(v)
+                sol_colors.append(colors[i])
 
         sol_nodes = nx.draw_networkx_nodes(
             G,
             pos=positions,
-            nodelist=self.solution[1][0],
-            node_size=500,
-            node_color="black"
+            nodelist=sol_vertices,
+            node_size=600,
+            node_color="white",
+            ax=ax
         )
+        # sol_nodes.set_edgecolors(sol_colors)
+        sol_nodes.set_edgecolors('limegreen')
+        # sol_nodes.set_linestyle('dashed')
+        sol_nodes.set_linewidth(2)
 
         nx.draw(G,
                 pos=positions,
@@ -144,7 +162,8 @@ class SearchGraph:
                 edge_color='gray',
                 font_weight='bold',
                 font_color='white',
-                with_labels=True)
+                with_labels=True,
+                ax=ax)
 
     def subset_cost(self, subset):
         return sum(self.vertices[v] for v in subset)
@@ -163,7 +182,6 @@ class SearchGraph:
         vertices = list(self.vertices.keys())
 
         for sub_size in range(1, self.size + 1):
-            print(sub_size)
             if cumulative_min_weight[sub_size - 1] > self.min_cost:
                 # prune
                 return
@@ -182,9 +200,6 @@ class SearchGraph:
 
         while queue:
             cost, index = queue.pop()
-
-            if len(index) == n:
-                continue
 
             subset = set(sorted_vertices[i] for i in index)
 
@@ -231,6 +246,7 @@ class SearchGraph:
             assert False, f"Unrecognized strategy \"{strategy}\""
 
     def search(self, strategy):
+        assert len(self.vertices) >= 2, "Not enough vertices to search"
         graph = set(self.vertices)
 
         self.min_cost = self.subset_cost(graph)
@@ -257,35 +273,28 @@ class SearchGraph:
 
 
 # g = SearchGraph().read_graph("graph1.txt")
-g = SearchGraph().random_graph(20, 93446)
 
+for size in range(2, 40):
+    g = SearchGraph().random_graph(size, 93446)
 
-fig, ax = plt.subplots(2, 2, num=1)
+    fig, ax = plt.subplots(1, 3, num=1)
+    fig.set_size_inches(21, 7)
 
+    for i, algo in enumerate(('greedy', 'astar', 'exhaustive')):
 
-g.search('greedy')
-print(g.solution, g.iter)
-print(f"{g.exec_time:.6f}")
+        g.search(algo)
+        print(g.solution, g.iter)
+        print(f"{g.exec_time:.6f}")
 
-plt.sca(ax[0][0])
-g.draw_graph()
-ax[0][0].set_title('greedy', fontsize=10)
+        plt.sca(ax[i])
+        g.draw_graph(ax[i])
 
+        ax[i].set_title(f"Solution with {algo.capitalize()} Search and size = {size}", fontsize=14)
+        ax[i].set_xlabel(f"total cost = {g.solution[0]}", fontsize=12)
+        ax[i].set_axis_on()
+        ax[i].set_xlim(0, 10)
+        ax[i].set_ylim(0, 10)
+        ax[i].tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
 
-g.search('astar')
-print(g.solution, g.iter)
-print(f"{g.exec_time:.6f}")
-
-plt.sca(ax[0][1])
-g.draw_graph()
-ax[0][1].set_title('astar', fontsize=10)
-
-g.search('exhaustive')
-print(g.solution, g.iter)
-print(f"{g.exec_time:.6f}")
-
-plt.sca(ax[1][0])
-g.draw_graph()
-ax[1][0].set_title('exhaustive', fontsize=10)
-
-plt.show()
+    fig.savefig(f"plots/g{size}.png", dpi=100)
+    fig.clear()
