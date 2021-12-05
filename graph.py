@@ -192,10 +192,10 @@ class SearchGraph:
             self.vertices.items(), key=lambda x: x[1] - len(self.edges(x[0])))]
 
     def exhaustive_combinations(self, with_bnb=True):
-        sorted_weights = sorted(self.vertices.values())
-        cumulative_min_weight = [sum(sorted_weights[:s + 1])
-                                 for s in range(self.size)]
-
+        if with_bnb:
+            sorted_weights = sorted(self.vertices.values())
+            cumulative_min_weight = [sum(sorted_weights[:s + 1])
+                                     for s in range(self.size)]
         vertices = list(self.vertices.keys())
 
         for sub_size in range(1, self.size + 1):
@@ -259,23 +259,22 @@ class SearchGraph:
                     queue.append(node)
 
     def combinations(self, strategy: str, heuristic: str):
+        heuristic = self.heuristic2 if heuristic == 2 else self.heuristic
+
         if strategy == 'exhaustive':
             return self.exhaustive_combinations(False)
-        elif strategy == 'branch_and_bound':
+        elif strategy == 'branch-and-bound':
             return self.exhaustive_combinations()
         elif strategy == 'greedy':
-            return self.greedy_combinations(
-                self.heuristic2 if heuristic == 2 else self.heuristic)
+            return self.greedy_combinations(heuristic)
         elif strategy == 'astar':
-            return self.astar_combinations(
-                self.heuristic2 if heuristic == 2 else self.heuristic, False)
-        elif strategy == 'astar_heap':
-            return self.astar_combinations(
-                self.heuristic())
+            return self.astar_combinations(heuristic, False)
+        elif strategy == 'astar-heap':
+            return self.astar_combinations(heuristic)
         else:
             assert False, f"Unrecognized strategy \"{strategy}\""
 
-    def search(self, strategy: str, heuristic: int):
+    def search(self, strategy: str, heuristic: int = 1):
         assert len(self.vertices) >= 2, "Not enough vertices to search"
         graph = set(self.vertices)
 
